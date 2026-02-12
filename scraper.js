@@ -38,4 +38,38 @@ const WEBHOOK_URL = "https://8pro.growfik.com/webhook/3e830f4a-1b18-49eb-9c5b-5e
     if (latest.length === 0) {
       console.log("No videos found.");
       await browser.close();
-      re
+      return;
+    }
+
+    const payload = JSON.stringify({ videos: latest });
+
+    const url = new URL(WEBHOOK_URL);
+
+    const options = {
+      hostname: url.hostname,
+      path: url.pathname,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': payload.length
+      }
+    };
+
+    const req = https.request(options, res => {
+      console.log("Webhook status:", res.statusCode);
+    });
+
+    req.on('error', err => {
+      console.error("Webhook error:", err);
+    });
+
+    req.write(payload);
+    req.end();
+
+  } catch (err) {
+    console.error("Error:", err);
+  }
+
+  await browser.close();
+})();
+
