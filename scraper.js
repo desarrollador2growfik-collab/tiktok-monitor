@@ -1,31 +1,25 @@
 const https = require("https");
 
 const USERNAME = "Anyafer_";
+const API_KEY = "897015ba-96fc-440a-9e00-2a2b9f6dedff";
+const ZONE = "web_unlocker1";
 
-const PROXY_HOST = "zproxy.lum-superproxy.io";
-const PROXY_PORT = 22225;
-const PROXY_USER = "brd-customer-hl_25b9f45b-zone-tiktok";
-const PROXY_PASS = "liu6yd4ukvrh";
-
-async function fetchTikTok() {
+function callBrightData(url) {
   return new Promise((resolve, reject) => {
+    const payload = JSON.stringify({
+      zone: ZONE,
+      url: url,
+      format: "raw"
+    });
+
     const options = {
-      host: PROXY_HOST,
-      port: PROXY_PORT,
-      method: "GET",
-      path: `https://www.tiktok.com/api/post/item_list/?aid=1988&count=5&uniqueId=${USERNAME}`,
+      hostname: "api.brightdata.com",
+      path: "/request",
+      method: "POST",
       headers: {
-        "Proxy-Authorization":
-          "Basic " +
-          Buffer.from(`${PROXY_USER}:${PROXY_PASS}`).toString("base64"),
-
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
-
-        "Accept": "application/json, text/plain, */*",
-        "Referer": `https://www.tiktok.com/@${USERNAME}`,
-        "Origin": "https://www.tiktok.com",
-        "Accept-Language": "en-US,en;q=0.9"
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${API_KEY}`,
+        "Content-Length": payload.length
       }
     };
 
@@ -34,30 +28,51 @@ async function fetchTikTok() {
       res.on("data", (chunk) => (data += chunk));
       res.on("end", () => {
         console.log("STATUS:", res.statusCode);
-        console.log("RAW RESPONSE:");
-        console.log(data.substring(0, 500)); // mostrar primeros 500 chars
         resolve(data);
       });
     });
 
     req.on("error", reject);
+    req.write(payload);
     req.end();
   });
 }
 
 (async () => {
   try {
-    console.log("Probando endpoint TikTok...");
+    console.log("Consultando TikTok con Web Unlocker...");
 
-    const response = await fetchTikTok();
+    const tiktokUrl = `https://www.tiktok.com/@${USERNAME}`;
+    const response = await callBrightData(tiktokUrl);
 
-    try {
-      const json = JSON.parse(response);
-      console.log("JSON válido recibido");
-      console.log(json);
-    } catch (e) {
-      console.log("NO es JSON válido");
+    // Mostrar primeros 1000 caracteres para debug
+    console.log("Respuesta parcial:");
+    console.log(response.substring(0, 1000));
+
+    // Intentar extraer JSON interno
+    const match = response.match(/<script id="SIGI_STATE" type="application\/json">(.*?)<\/script>/);
+
+    if (!match) {
+      console.log("No se encontró SIGI_STATE.");
+      return;
     }
+
+    const json = JSON.parse(match[1]);
+
+    const items =
+      json?.ItemModule ? Object.values(json.ItemModule) : [];
+
+    if (!items.length) {
+      console.log("No se encontraron videos.");
+      return;
+    }
+
+    const videos = items.slice(0, 2).map(
+      (item) => `https://www.tiktok.com/@${USERNAME}/video/${item.id}`
+    );
+
+    console.log("Videos encontrados:");
+    console.log(videos);
 
   } catch (err) {
     console.error("Error general:", err);
