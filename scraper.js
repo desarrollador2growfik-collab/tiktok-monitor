@@ -8,7 +8,7 @@ const WEBHOOK_URL = "https://8pro.growfik.com/webhook/3e830f4a-1b18-49eb-9c5b-5e
   const browser = await chromium.launch({
     headless: true,
     proxy: {
-      server: "http://brd.superproxy.io:33335",
+      server: "http://zproxy.lum-superproxy.io:22225",
       username: "brd-customer-hl_25b9f45b-zone-tiktok",
       password: "liu6yd4ukvrh"
     }
@@ -17,69 +17,71 @@ const WEBHOOK_URL = "https://8pro.growfik.com/webhook/3e830f4a-1b18-49eb-9c5b-5e
   const context = await browser.newContext({
     userAgent:
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
-    locale: "es-CO"
+    locale: "es-CO",
+    viewport: { width: 1280, height: 800 }
   });
 
   const page = await context.newPage();
 
   try {
-    console.log("Abriendo perfil con proxy...");
-
+    console.log("Conectando con proxy residencial...");
+    
     await page.goto(`https://www.tiktok.com/@${USERNAME}`, {
-      waitUntil: "domcontentloaded",
-      timeout: 60000
+      waitUntil: "networkidle",
+      timeout: 90000
     });
 
-    await page.waitForTimeout(5000);
+    console.log("Perfil cargado.");
 
-    const content = await page.content();
+    const html = await page.content();
 
-    const jsonMatch = content.match(
+    const match = html.match(
       /<script id="SIGI_STATE" type="application\/json">(.*?)<\/script>/
     );
 
-    if (!jsonMatch) {
-      console.log("No se pudieron encontrar los datos del perfil.");
+    if (!match) {
+      console.log("No se encontró el JSON interno de TikTok.");
       await browser.close();
       return;
     }
 
-    const data = JSON.parse(jsonMatch[1]);
+    const data = JSON.parse(match[1]);
 
     const items = Object.values(data.ItemModule || {});
-    const latest = items.slice(0, 2).map(
+    const videos = items.slice(0, 2).map(
       (item) =>
         `https://www.tiktok.com/@${USERNAME}/video/${item.id}`
     );
 
-    console.log("Videos encontrados:", latest);
+    console.log("Videos encontrados:", videos);
 
-    if (latest.length === 0) {
-      console.log("No se encontraron videos.");
+    if (!videos.length) {
+      console.log("No hay videos.");
       await browser.close();
       return;
     }
 
-    const payload = JSON.stringify({ videos: latest });
+    const payload = JSON.stringify({ videos });
 
     const url = new URL(WEBHOOK_URL);
 
-    const options = {
-      hostname: url.hostname,
-      path: url.pathname,
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Content-Length": payload.length
+    const req = https.request(
+      {
+        hostname: url.hostname,
+        path: url.pathname,
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": payload.length
+        }
+      },
+      (res) => {
+        console.log("Webhook status:", res.statusCode);
       }
-    };
-
-    const req = https.request(options, (res) => {
-      console.log("Webhook status:", res.statusCode);
-    });
+    );
 
     req.on("error", (err) => {
-      console.error("Error webhook:", err);
+      console.error("Error enviando webhook:", err);
     });
 
     req.write(payload);
