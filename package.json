@@ -1,0 +1,12 @@
+{
+  "name": "tiktok-monitor",
+  "version": "1.0.0",
+  "description": "Monitor TikTok profile and send webhook if new videos",
+  "main": "scraper.js",
+  "scripts": {
+    "start": "node scraper.js"
+  },
+  "dependencies": {
+    "playwright": "^1.42.1"
+  }
+}
