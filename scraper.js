@@ -9,7 +9,7 @@ function callBrightData(url) {
     const payload = JSON.stringify({
       zone: ZONE,
       url: url,
-      format: "raw"
+      format: "json"
     });
 
     const options = {
@@ -25,7 +25,7 @@ function callBrightData(url) {
 
     const req = https.request(options, (res) => {
       let data = "";
-      res.on("data", (chunk) => (data += chunk));
+      res.on("data", chunk => data += chunk);
       res.on("end", () => {
         console.log("STATUS:", res.statusCode);
         resolve(data);
@@ -40,35 +40,22 @@ function callBrightData(url) {
 
 (async () => {
   try {
-    console.log("Consultando TikTok con Web Unlocker...");
+    console.log("Consultando endpoint JSON real de TikTok...");
 
-    const tiktokUrl = `https://www.tiktok.com/@${USERNAME}`;
-    const response = await callBrightData(tiktokUrl);
+    const apiUrl = `https://www.tiktok.com/api/post/item_list/?aid=1988&count=5&uniqueId=${USERNAME}`;
 
-    // Mostrar primeros 1000 caracteres para debug
-    console.log("Respuesta parcial:");
-    console.log(response.substring(0, 1000));
+    const response = await callBrightData(apiUrl);
 
-    // Intentar extraer JSON interno
-    const match = response.match(/<script id="SIGI_STATE" type="application\/json">(.*?)<\/script>/);
+    const json = JSON.parse(response);
 
-    if (!match) {
-      console.log("No se encontró SIGI_STATE.");
-      return;
-    }
-
-    const json = JSON.parse(match[1]);
-
-    const items =
-      json?.ItemModule ? Object.values(json.ItemModule) : [];
-
-    if (!items.length) {
+    if (!json.itemList || !json.itemList.length) {
       console.log("No se encontraron videos.");
+      console.log(json);
       return;
     }
 
-    const videos = items.slice(0, 2).map(
-      (item) => `https://www.tiktok.com/@${USERNAME}/video/${item.id}`
+    const videos = json.itemList.slice(0, 2).map(
+      item => `https://www.tiktok.com/@${USERNAME}/video/${item.id}`
     );
 
     console.log("Videos encontrados:");
