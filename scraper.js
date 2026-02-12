@@ -25,7 +25,7 @@ const WEBHOOK_URL = "https://8pro.growfik.com/webhook/3e830f4a-1b18-49eb-9c5b-5e
 
   try {
     console.log("Conectando con proxy residencial...");
-    
+
     await page.goto(`https://www.tiktok.com/@${USERNAME}`, {
       waitUntil: "networkidle",
       timeout: 90000
@@ -35,22 +35,24 @@ const WEBHOOK_URL = "https://8pro.growfik.com/webhook/3e830f4a-1b18-49eb-9c5b-5e
 
     const html = await page.content();
 
+    // Nuevo script donde TikTok guarda datos
     const match = html.match(
-      /<script id="SIGI_STATE" type="application\/json">(.*?)<\/script>/
+      /<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application\/json">(.*?)<\/script>/
     );
 
     if (!match) {
-      console.log("No se encontró el JSON interno de TikTok.");
+      console.log("No se encontró el JSON actualizado de TikTok.");
       await browser.close();
       return;
     }
 
     const data = JSON.parse(match[1]);
 
-    const items = Object.values(data.ItemModule || {});
+    const userModule = data?.__DEFAULT_SCOPE__?.["webapp.user-detail"];
+    const items = userModule?.itemList || [];
+
     const videos = items.slice(0, 2).map(
-      (item) =>
-        `https://www.tiktok.com/@${USERNAME}/video/${item.id}`
+      (id) => `https://www.tiktok.com/@${USERNAME}/video/${id}`
     );
 
     console.log("Videos encontrados:", videos);
